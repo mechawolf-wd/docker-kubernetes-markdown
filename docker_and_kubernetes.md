@@ -499,3 +499,30 @@ Drivers:
 5. Third-party plugins - You can install 3rd party plugins which then may add all kinds of functions.
 
 but "BRIDGE" makes most sense in the vast majority of scenarios.
+
+*#* Revision *#*
+
+If you run Database container make sure to publish the <port>
+# docker run ... -p 27017:27017
+
+Remember about -it flag if used in React app (Interactive flag).
+# docker run ... -it
+
+node_modules might *FUCK* your application up if you copy them to your working directory.
+Keep them out with [.dockerignore].
+
+If you want to make:
+# docker run ... (with) --network <network-name>
+
+Make sure your backend uses the name of the container in database url.
+
+*WARNING* If you would like to talk to the backend. Please make sure, once you dockerize it,
+you have already published some port so that client side rendered frontend can easily communicate with it.
+
+*INFO* Docker will LOAD volume if already existing.
+# docker run ... -v name:/path/is/this
+
+Not allowing node_modules to be overwritten by using anonymous volume.
+# docker run -v /app/node_modules
+
+Use "nodemon" to watch changes in node.js application.
