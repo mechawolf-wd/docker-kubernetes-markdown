@@ -508,7 +508,7 @@ If you run Database container make sure to publish the <port>
 Remember about -it flag if used in React app (Interactive flag).
 # docker run ... -it
 
-node_modules might *FUCK* your application up if you copy them to your working directory.
+node_modules might *CRASH* your application up if you copy them to your working directory.
 Keep them out with [.dockerignore].
 
 If you want to make:
@@ -526,3 +526,95 @@ Not allowing node_modules to be overwritten by using anonymous volume.
 # docker run -v /app/node_modules
 
 Use "nodemon" to watch changes in node.js application.
+
+Using Bind-mount with frontend app it will reload (if your app code supports hot reload).
+
+*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+*#*#*#*#* Docker Compose *#*#*#*#*
+*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+
+*I* Docker compose does NOT replace images or containers.
+*I* Docker compose does NOT replace Dockefiles.
+*I* Docker compose is used mostly for the SAME host.
+
+Two formats are available.
+
+*docker-compose.yaml* OR *docker-compose.yml*
+
+[Docker-compose] consists of keywords. So make sure you typed them the proper way (Indentation matters).
+@docker-compose.yaml
+
+version: "3.8"
+services:
+  mongodb: # [#] Name of the container
+    image: 'mongo' # [#] Specifying image
+    volumes: # [#] Specifying volumes
+      - data:/data/db
+    container_name: mongodb # [#] Setting the name of the container.
+   #environment: [#] ENV Variables
+      # MONGO_INITDB_ROOT_USERNAME: max [#] (1st syntax)
+      # - MONGODB_INITDB_ROOT_USERNAME=max [#] (2nd syntax)
+      # (3rd syntax -> use file .env)
+    env_file: # [#] Relative path to a .env file
+      - ./env/mongo.env
+  backend:
+    build: './backend' # [#] This command will look for the Dockerfile inside that.
+    # build:
+    #  context: ./backend [#] Can be a path and it will also be a place of build step for the image.
+    #  dockerfile: Dockerfile [#] If you named your Dockerfile different way
+    #  arg: [#] You can use ARGs in case your image uses ARGs
+    #    some-arg: 1
+    ports:
+      - '80:80'
+    volumes:
+      - logs:/app/logs
+      - ./backend:/app # [#] In this case you can specify a bind mount with a relative NOT absolute path.
+      - /app/node_modules # [#] specifying anonymous volumes.
+    env_file:
+      - ./env/backend.env
+    depends_on: # [#] ONLY in docker-compose. On multiple services this is extra useful.
+      - mongodb
+  frontend:
+    build: './frontend'
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./frontend/src:/app/src
+    stdin_open: true # [#] Letting docker-compose to know that this service need a open-input connection.
+    tty: true # [#] For attaching terminal.
+    depends_on:
+      - backend
+  # frontend:
+volumes: # [#] Make docker aware of named volumes. So that different containeres can use the same volume.
+# [#] (Anonymous volumes and Bind:Mounts don't have to be specified there)
+  data:
+  logs:
+
+
+*I* --rm is default in dcompose
+*I* -d is default in dcompose
+*I* For key:value pairs you don't need dashes (this creates a yaml object).
+
+*EXTRA* [docker-compose] will create network automatically for the containers!
+
+@CLI
+# docker-compose up
+
+or in detatched mode...
+# docker-compose up -d
+
+to DELETE all containers are networks from using docker-compose up -d
+but the following will not remove volumes.
+# docker-compose down
+
+you can use -v flag to remove them too.
+# docker-compose down -v
+
+*I* Docker will generate names of compose-up containers not only by their service names.
+*I* Service names ARE THE NAMES THAT CAN BE USED AS REQUEST URLS etc...
+*I* Docker-compose will NOT build images every time.
+
+@CLI
+
+Force image re-building.
+# docker-compose up ... --build
