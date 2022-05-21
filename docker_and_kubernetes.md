@@ -1,9 +1,11 @@
 // ===========================================================================
 // ================ 🐳 Dockerfile -> build -> run -> stop 🐳 ================
 // ================================ *EXAMPLE* ================================
+@[Dockerfile]
+
 # FROM node:<version-tag>
 
-There commands will be run
+Changing WORKDIR
 # WORKDIR /app
 
 Copy package.json and then install the app. 
@@ -20,7 +22,7 @@ This will serve when container is started not when image is being built
 
 # CMD ["node", "server.js"]
 
-// ================================ *QUICKSTART?* ================================
+// ================================ *QUICKSTART* ================================
 
 *#**#**#*  Couple of CLI commands pt. 1 *#**#**#* 
 # docker [ps] <- (lists all running containers)
@@ -143,7 +145,7 @@ Pulls latest image from the targetted registry.
 # docker run <image-name>
 Will run a local image but if it can't find it will use [Docker_Hub] (There are no check for the latest version).
 
-*#**#**#* Volumes and Bind Mounts *#**#**#*
+// ================================ *Volumes and Bind Mounts* ================================
 
 1. If you stop a container without a "--rm" option data WON'T BE LOST 🔃
 2. But will be LOST if you remove the container.
@@ -219,9 +221,9 @@ You can install a specific package that will make changes in NODE apps reflected
 # and in "scripts": { "start": "nodemon server.js" }
 
 @[Dockerfile]
-# CMD [ "npm", "start" ] change to => CMD [ "npm", "start" ]
+# CMD [ "npm", "start" ] change to => CMD [ "nodemon", "file" ]
 
-If you are using WSL2 you should store it somewhere in the LINUX folder structure??? what...
+If you are using WSL2 you should store it somewhere in the LINUX folder structure? what...
 
 *#**#**#* Summary of Volumes and Bind Mounts *#**#**#*
 
@@ -230,7 +232,7 @@ If you are using WSL2 you should store it somewhere in the LINUX folder structur
 # VOLUME ["/temp"]
 
 CMD:
-# docker run -v /app/data/
+# docker run ... -v /app/data/ ...
 
 Characteristics:
 - Created for the specific container
@@ -241,7 +243,7 @@ Characteristics:
 => Useful for not-overwriting things in your bind-mounted project
 
 2. Named volumes
-# docker run -v name:/inside_docker/path...
+# docker run ... -v name:/inside_docker/path... ...
 Cannot be created in [Dockerfile] since they are not attached to the container itself.
 
 Characteristics:
@@ -252,7 +254,7 @@ Characteristics:
 - Can be reused for the same container
 
 3. Bind Mounts
-# docker run "/User/absolute/path/:/inside_docker/path"
+# docker run ... "/User/absolute/path/:/inside_docker/path" ...
 - LOCATION is actually known. (Which is not possible with VOLUMES)
 - Can survive anything!!!
 - Only way to remove it, you have to remove it ON YOUR LOCAL MACHINE. (yes) (you can't use docker cmd for this purpose)
@@ -331,22 +333,22 @@ Something Extra:
 BIND MOUNT is DEV thing. ON your server you will NOT run docker container instance with a CMD command.
 We simply won't use BIND MOUNT. In production we want to have a SNAPSHOT instead.
 
-*#**#**#* [dockerignore] <- file *#**#**#*
+*#**#**#* [.dockerignore] <- file *#**#**#*
 
 @[Dockerfile]
 # COPY . .
 now copies everything in the folder.
 
-1. make a ".[dockerignore]" file (this specifies what files should not be copied by COPY instruction)
+1. make a "[.dockerignore]" file (this specifies what files should not be copied by COPY instruction)
 
-@.[dockerignore] (consider adding this path | files)
+@[.dockerignore] (consider adding this path | files)
 <!--
 node_modules
 .git
 Dockefile 
 -->
 
-*#**#**#* ARGuments and ENVironments *#**#**#*
+// ================================ *ARGuments and ENVironments* ================================
 
 Docker support build-time ARGuments and ENVironment variables.
 One note: Using them at the beginning of the [Dockerfile] might be time consuming and useless thereafter.
@@ -408,6 +410,8 @@ Most USEFUL for changing something between built images.
 ^ Example
 
 *#**#**#* Networking: (Cross-) Container Communication *#**#**#*
+// ==================== *Networking: (Cross-) Container Communication* ====================
+
 
 (One container should do one separated thing!)
 
@@ -465,7 +469,7 @@ Default Mmongodb port: 27017
 
 Creating isolated container with a network
 but network will NOT be created if not existing.
-# docker run --network <network-id>
+# docker run ... --network <network-id> ...
 
 Creating a NETWORK:
 # docker network create <new-network-id>
@@ -529,9 +533,7 @@ Use "nodemon" to watch changes in node.js application.
 
 Using Bind-mount with frontend app it will reload (if your app code supports hot reload).
 
-*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
-*#*#*#*#* Docker Compose *#*#*#*#*
-*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+// ==================== *Docker Compose* ====================
 
 *I* Docker compose does NOT replace images or containers.
 *I* Docker compose does NOT replace Dockefiles.
@@ -584,8 +586,7 @@ services:
     tty: true # [#] For attaching terminal.
     depends_on:
       - backend
-  # frontend:
-volumes: # [#] Make docker aware of named volumes. So that different containeres can use the same volume.
+volumes: # [#] Make docker aware of named volumes. So on, different containeres can use the same volume.
 # [#] (Anonymous volumes and Bind:Mounts don't have to be specified there)
   data:
   logs:
@@ -618,3 +619,50 @@ you can use -v flag to remove them too.
 
 Force image re-building.
 # docker-compose up ... --build
+
+// ================================ *UTILITY CONTAINERS* ================================
+
+Just ENVIRONMENT.
+
+Use case:
+You would need to install Node to run npm command, but...
+
+This container if not used with -it flag will IMMEDIATELY stop.
+# docker run node
+
+...but this will not stop immediately: (You can then attach yourself to it)
+# docker run -it -d node
+
+Allows you to run more commands inside of a container. (If you want to provide input add -it flag)
+# Docker exec -it <container-namer> npm init
+
+Running container & npm command.
+# docker run -it <image-name> npm init
+
+*I* alpine <- slim node image.
+
+----------------
+ENTRYPOINT
+
+Restricting commands:
+
+@[Dockerfile]
+
+// and then in cli you can APPEND this command.
+ENTRYPOINT [ "npm" ]
+
+so that...
+
+# docker run ... <image> init
+
+= init is now a string appended to the ENTRYPOINT string. Results in (npm init).
+
+@CLI of [docker-compose]
+
+Running just one service from the docker-compose.yaml
+# docker-compose run <service-name>
+
+^ however this does not remove container automatically.
+
+--------
+Utility containers are just for running some environment.
