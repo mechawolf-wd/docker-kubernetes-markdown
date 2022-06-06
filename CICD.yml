@@ -1,0 +1,143 @@
+image: python # Specifying image from Docker 
+
+# Stages are executed in order based on APPEARANCE
+stages:
+  - build
+  - test
+  - deploy # If two jobs are ````inside one stage, they are run concurrently
+
+variables: # Defining ENVIRONMENT (.env) variables
+  USERNAME: tech_with_moss
+
+build-job: # Job name
+  stage: build # Linked to the stage
+  script: # This is obligatory (Ordered)
+    - echo "Compiling the code..."
+    - echo "Compile complete."
+    - mkdir build/
+    - echo "My application binary file" > build/executable-binary-file-v1
+  artifacts: # Allows to specify files for downstream jobs (we may want to download and check out these files)
+    paths:
+      - "build/executable-binary-file-v1" # This will be uploaded to gitlab
+  cache:
+    key: 'some_key'
+    paths:
+      - node_modules
+
+
+unit-test-job:
+  stage: test
+  script:
+    - echo "Running unit tests... This will take about 60 seconds."
+    # - sleep 60 # Sleeping
+    - echo "Code coverage is 90%"
+    - cat $CI_PROJECT_DIR/build/executable-binary-file-v1
+
+lint-test-job:   # This job also runs in the test stage.
+  stage: test    # It can run at the same time as unit-test-job (in parallel).
+  script:
+    - echo "Linting code... This will take about 10 seconds."
+    - echo "No lint issues found."
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in thea test stage complete successfully.
+  script:
+    - echo "Deploying application..."
+    - python3 --version
+    - echo "Using credentials - $USERNAME, $PASSWORD"
+    - echo "Application successfully deployed."
+
+# =-=-=-=-=-=-=-= INCLUDE KEYWORD =-=-=-=-=-=-=-= (Used for similar projects)
+
+include: # For different yml files
+  - local: 'configs/build.yml' # eg. different jobs inside different files
+  # ================================ # Evaluated during pipiline creation
+  - project: 'devops/project-name' # project name
+    file: 'tmpls/microservices.yml' # file name
+    ref: 'master' # branch name
+  # ================================ 
+  - remote: 'https://site.pl/my.yml' # accessing remote file
+  # ================================ 
+  - template: 'Bash.gitlab.yml' # Shipped by gitlab
+
+# =-=-=-=-=-=-=-= EXTENDS =-=-=-=-=-=-=-= (Inherit from other jobs and from hidden!... mostly often)
+# Inheriting common logic? Yes.
+
+# ================================ 
+.deploy: # Hidden job
+  script: ./deploy.sh
+
+deploy dev:
+  extends: .deploy
+  when: manual # for manual usage
+# ================================ 
+
+# Example of usage
+test:
+  before_script: # Called before script 
+    - echo "before"
+  script:
+    - echo "test"
+
+second test:
+  extends: test # Watch up! It takes it from us!
+  after_script: # Called after the script
+    - echo "after"
+
+# ================================
+
+# Listen up... You can merge 'variables' you cannot MERGE ARRAYS eg. 'script' (it will be overwritten)
+
+third example:
+  script:
+    - echo ""
+  variables:
+    MY_VAR: "54"
+    MY_VAR2: "54"
+
+# =-=-=-=-=-=-=-= Rules =-=-=-=-=-=-=-= (Include or exclude job in pipelines -> replacement for only/except)
+
+# if, when, changes, exists
+# Commander you are free to mix these!
+
+buildooo:
+  script:
+    - echo ""
+  rules: # Rules for a job
+    - if: '#CI_COMMIT_REF_NAME == "master"' # branch name? Yes.
+      when: always # when to 
+    - when: manual # when the branch target is different (default one)
+      allow_failure: true
+
+docker_example1:
+  script:
+    - echo ""
+  rules:
+    - changes: # Only if something has been changed in Dockerfile
+      - Dockerfile
+      - app/**/*
+
+docker_example2:
+  script:
+    - echo ""
+  rules:
+    - exists:
+      - .dockerignore # Only if something is in existence
+  tags:
+    - AWS # Sepcifying a runner
+
+# =-=-=-=-=-=-=-= Trigger =-=-=-=-=-=-=-= (You can define downstream pipeline trigger) (different project OR same project)
+
+trigger_job: # triggering a job inside different project (trigger job doesn't wait for downstream pipeline)
+  trigger:
+    project: my-group/my-project
+    branch: master # (optional)
+    strategy: depend # (optional) depend - will behave like a normal job
+  needs: ["some_build"] # Run job aborting the stage ordering
+
+trigger_job_2:
+  trigger:
+    include: my-group/my-project
+  strategy: depend
+
+# You have so many tests -> run it as a child pipeline
