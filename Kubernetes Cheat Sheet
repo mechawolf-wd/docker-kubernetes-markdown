@@ -1,0 +1,934 @@
+[*][*][*][*][*][*][*][*][*][*][*]
+
+      The Kubernetes (K8s)
+
+[*][*][*][*][*][*][*][*][*][*][*]
+
+[---------------------------------]
+  Getting started with Kubernetes
+[---------------------------------]
+
+"Independent Container Orchestration"
+"System for automating deployment"
+"We can configure anything indepenent from the cloud provider"
+
+  - High availability or no downtime
+  - Scalability or high performance
+  - Disaster recovery - backup and restore
+
+We Have a Problem dude...
+
+  - Containers might crash / go down and need to be replaced! (Keeping an eye)
+  - You can't watch your logs all day long... (Maintanance)
+  - We might need more container instances upon traffic spikes. (Distribution)
+  - Incoming traffic should be distributed equally. (Distribution)
+
+... but why Kubernetes?
+
+  Services like ECS might help us with the problem.
+
+  but if we make an EC2 instance... we are locked into this instance.
+  So that the config is valid only in the EC2 AWS world.
+
+* Kubernetes is like an ECS for any provider?
+
+Kubernetes =
+  - Automatic Deployment
+  - Scaling & Load Balancing
+  - Management
+
+so that...
+
+Kubernetes Configuration -> (Some Provider) some specific Setup or Tool -> Any Cloud Provider
+
+"Kubernetes is like docker-compose for multiple machines"
+
+[*] Kubernetes: Architecture & Core Concepts [*]
+
+    Cluster [
+
+      Master Node "I control your deployment. I don't wrap nodes." (
+
+        [The Control Plane]
+
+        [Various Components which help with managing the Worker Nodes]
+
+        (more or less...) 3x Worker Node "I run the containers of your application, I am a machine!" (
+
+          - Pod "Container" (Pod - smallest possible unit, holds a container or containers)
+
+          - Proxy / Config (controls how network traffic of the pod is behaving)
+
+        )
+
+      )
+
+    ] -> Cloud Provider API
+
+[*][*][*] Worker Nodes (think like that: "one computer") [*][*][*]
+
+- Managed by the Master Node
+
+Consists of:
+  "docker" -> maybe...
+  "kubelet" -> Does the communication with the Master Node. Installed on the Worker Node.
+  "kube-proxy" -> Managed Node and Pod network communication
+
+[*][*][*] Master Node [*][*][*]
+
+  consits of...
+
+  1. "API Server" which is a communication provider for Worker Nodes.
+    - Entrypoint to K8s Cluster
+
+  2. "Controller Manager" which watches and controls Worker Nodes, correct number of Pods & more...
+     - Keeps track of whats happening in the cluster.
+    
+  3. "Scheduler". This watches new Pods selects Worker Nodes to run them on.
+     - Ensures Pods placement.
+
+  4. "Cloud-Controller-Manager" which is like "Kube-Controller-Manager" but for specific Cloud Provider!
+     - Knows how to interact with Cloud Provider resources.
+
+  5. "etcd" which is a key-value storage.
+     - Has all the configuration data. Backup is made from etcd snapshots.
+
+[i] Clients can be:
+    - UI (Dashboard),
+    - API (curl or...),
+    - CLI (kubectl).
+
+[*][*][*] Important Terms and Core Components (keep them in mind!) [*][*][*]
+
+  + Sevices? groups of Pods with a unique independent IP addresses. (these are related to the Proxy thing)
+
+[-------------------------------------------------------]
+  Kubernetes in Action - Diving into the Core Conecepts
+[-------------------------------------------------------]
+
+Important thing is that Kubernetes will:
+  - Help with creating Pods and managing them,
+  - monitor pods and re-create them or scale them
+  - will not install any software.
+
+Checkout: Kubermatic, Amazon EKS
+
+[*][*][*] Setup [*][*][*]
+
+"kubectl" = kube control (a tool for sending instructions to the cluster)
+
+Minikube for the help.
+
+Installing kubectl (MacOS)
+# ❯ brew install kubectl
+
+Checking version.
+# ❯ kubectl version --client
+
+Veryfing wether our cluster works.
+# ❯ minikube status
+
+Open web-application so that you can look into your cluster (You need to stop it).
+# ❯ minikube dashboard
+
+Logs.
+# ❯ minikube logs
+
+[*][*][*] Understanding Kubernetes Objects (Resources) [*][*][*]
+
+K8s works with so called "Objects"
+
+Objects are:
+  - Pods
+  - Deployments
+  - Services
+  - Volume
+  ...
+
+Objects can be created in two ways.
+
+Imperatively or Declaratively
+
+* The "Pod" Object
+
+  - Contains and runs one or multiple containers.
+    The most common us case is: one container - one pod.
+
+  - By default Pod has a cluster-internal IP by default
+    Containers inside a Pod can communicate via localhost.
+
+  - Task from AWS is like a Pod.
+
+  - Pods are designed to be ephermeral (krótkotrwały).
+    Kubernetes will start, stop and replace them as needed.
+
+* The "Deployment" Object
+
+  - You give this a number of pods etc...
+
+  - Is able to control one or more Pods.
+
+  - You set a desired state, Kubernetes then changs the actual state.
+    Defined which Pods and containers to run and the number of instances.
+
+  - Deployment can be paused, deleted and rolled back.
+    We can revert the thing and use the last working version.
+
+  - Deployments can be scaled dynamically (and automatically)
+    You can change the number of desired Pods as needed.
+
+[i] Deployment = a template for creating pods
+
+[*][*][*] A First Deployment [*][*][*]
+
+First: Just build the image
+# ❯ docker run ... build .
+
+This is an inception... We would then use Docker to work with that.. i... think... what?
+# ❯ minikube start --driver=docker
+
+Kube! Please help!
+# ❯ kubectl help
+
+Creating an object. (Automatically send to the cluster and sepcifying the image)
+Keep in mind that local image might fail...
+because your image is not being sent to the cluster.
+Instead cluster will look for this image.
+# ❯ kubectl create deployment <name> --image=<image-name>,<image-name>,<image-name>...
+
+Getting deployments.
+# ❯ kubectl get deployments
+
+Getting pods.
+# ❯ kubectl get pods
+
+<!-- 
+NAME                         READY   STATUS             RESTARTS   AGE
+first-app-7cbbc8669d-rr956   0/1     ImagePullBackOff   0          56s
+-->
+
+Removing deployment.
+# kubectl delete deployment first-app
+
+[*][*][*] Behind the Scenes [*][*][*]
+
+Once you create the deployment...
+
+Master Node (Control Plane)
+  -  Scheduler analyzes currently running Pods and finds the best Node for
+      for the new Pod(s
+
+  - Some Worker Node -> kubelet manages the Pods and Containers
+              |
+              |
+              |
+              \/
+
+        Pod -> (Container)
+
+To reach a Pod and the Container running in it you might need a Service.
+Service can expose Pods to the Cluster or Externally.
+
+* The "Service" Object
+
+  - Pods have an internal IP by default - it changes when a Pod is replaced.
+  Finding Pods is hard if the IP changes all the time.
+
+  - Services group Pods with a shared IP.
+
+  - Services can allow external access to Pods.
+
+  - Without Services, Pods are very hard to reach and communication is difficult.
+
+
+Exposes a Pod.
+# ❯ kubectl expose deployment <name> --type=NodePort --port=<port>
+
+  --type=NodePort mean this deployment will be exposed with help of IP Address of the Worker Node.
+  --type=LoadBalancer utilizes Load Balancer that will generate unique IP Address. Also, this will
+         also distribute incoming traffic. Available only if your infrastructure supports it.
+
+Getting services.
+# ❯ kubectl get services
+
+  <!-- 
+  NAME         TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+  first-app    LoadBalancer   10.108.157.120   <pending>     8080:31538/TCP   5s
+  kubernetes   ClusterIP      10.96.0.1        <none>        443/TCP          45m
+  -->
+
+Exposing to the local machine. (Darwin is f**ked...)
+# ❯ minikube service first-app
+  So that you are able to look at the app.
+
+In case you are using unsupported darwin or something else.
+# ❯ kubectl port-forward svc/<service-name> <port>:<port>
+
+[*][*][*] Restarting Containers [*][*][*]
+
+Synthetic crash simulation...
+
+Get pods (keep in mind that every reset will be incrementally longer).
+# ❯ kubectl get pods
+
+If the app fails it will restart again and again...
+
+[*][*][*] Scalling in Action [*][*][*]
+
+We can run the container three times...
+... but why?
+
+Replica is simply an instance of a Pod / Container. 3 Replicas means that the
+same Pod / Container is running 3 times.
+# ❯ kubectl scale deployment/<name> --replicas=<replica-count>
+
+Thanks to LoadBalancer traffic will be distributed evenly across these different pods.
+
+[*][*][*] Deployments [*][*][*]
+
+Update the image first.
+
+Updating the deployment 
+# ❯ kubectl set image deployment/<name> <old-image-name>=<new-image-name>
+
+New images will be pulled only if they use a new tag!
+# ❯ docker build ... -t [...]:<incrementing-number-or-something-else> .
+
+and then... with the same tag:
+# ❯ docker push mechawolf/<image-name>:<incrementing-number-or-something-else>
+
+Viewing the current updating status (Starts and interactive session)
+# ❯ kubectl rollout status deployment/<name>
+
+[i] Even if you try to use inexistent tag, kubectl will try to assign it.
+    If you have more pods they won't shut down because image couldn't be pulled.
+
+Rolling out (back) the deployment.
+# ❯ kubectl rollout undo deployment/<name>
+
+Viewing history of a deployment.
+# ❯ kubectl rollout history deployment/<name>
+
+Viewing the exact revision of the deployment.
+# ❯ kubectl rollout history deployment/<name> --revision=<number>
+
+Undoing deployment to exact revision.
+# ❯ kubectl rollout undo deployment/<name> --to-revision=<number>
+
+
+[*][*][*] Imperative vs Declarative [*][*][*]
+
+* Imperative
+  - kubectl ...
+  - Individual commands
+  - Easily comparable to using docker run ...
+
+* Declarative
+# ❯ kubectl apply -f config.(yaml || yml)
+  - A config file is defined and applied to change the desired state
+  - Kubernetes will automatically makes changes
+  - Easily comparable to using docker-compose up
+
+so that...
+
+  1. Create a deployment.(yaml || yml)
+
+  2. Configure it
+
+Applying dpeloyment.yaml.
+# ❯  kubectl apply -f=./deployment.yaml -f...
+
+------------------------------------------------
+@ [service.yaml]
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  <!-- So that you are able to delete them with just one name -->
+  labels:
+    group: example
+spec:
+  selector:
+    <!-- The one from the Service kind works a bit different. Directly add the labels. -->
+    app: second-app
+  ports:
+    - protocol: 'TCP'
+      <!-- Outside world. -->
+      port: 80
+      <!-- The one listened to. -->
+      targetPort: 8080
+  type: LoadBalancer
+
+------------------------------------------------
+@ [deployment.yaml]
+
+<!-- Always sepcify it (Check in kubernetes.com). -->
+apiVersion: apps/v1
+<!-- Define kubernetes object you want to create (All resource types are strict!) -->
+kind: Deployment
+<!-- This includes crucial things (like the objects' name) -->
+metadata:
+  <!-- Deployment name. -->
+  name: second-app-deployment
+  labels:
+    group: example
+<!-- We will define many different important options there. -->
+<!-- spec: Spec for deployment. -->
+  <!-- Amount of replicas. Can be set to 0. -->
+  replicas: 1
+  <!-- Must be defined and -->
+  selector:
+    matchLabels:
+      <!-- Any other labels will not be controlled. -->
+      app: second-app
+      tier: backend
+    matchExpressions:
+      <!-- Referring on a label key -->
+      <!-- In => Select all pods in which values are like this (NotIn, In) -->
+      <!-- Deployment always needs to select pods it creates. -->
+      - { key: app, values: [ second-app, first-app ], operator: NotIn}
+      
+  <!-- Defined pods that should be created.
+       (Template is an OBJECT! every object has a metadata, template is always a pod) -->
+  template:
+    metadata:
+    <!-- You can have many of these. -->
+      labels:
+        app: second-app
+        tier: backend
+    spec:
+      <!-- Creating containers. -->
+      containers:
+        - name: second-node
+          <!-- Remember about not naming them the same way. -->
+          image: mechawolf/kub-first-app:2
+          imagePullPolicy: Always
+          <!-- Checking whether pods are healthy -->
+          livenessProbe:
+            httpGet:
+              path: /
+              <!-- Exposed on this port... -->
+              port: 8080
+            <!-- Every 10 seconds pod will be health-checked -->
+            periodSeconds: 10
+            initialDelaySeconds: 5
+
+------------------------------------------------
+
+[*][*][*] More and more of the kubernetes config syntax [*][*][*]
+
+Just make changes to the .yaml file and you are go to go.
+
+Deleting object-related context.
+# ❯ kubectl delete -f=./deployment.yaml
+
+Deleting objects by labels.
+# ❯  kubectl delete <object>,<object> -l <key>=<value>
+
+[*][*][*] Liveness Probes [*][*][*]
+
+Look up ^^ in the service.
+
+[-----------------------------------------]
+  Managing Data & Volumes with Kubernetes
+[-----------------------------------------]
+
+Data is persisted in the container.
+
+Compose. --build flag is used to control wether image is updated.
+# docker-compose up -d --build
+
+  - Kubernetes needs to be configured to add volumes.
+
+  - Volumes are a part of the pods so that they are dependant on them.
+
+  - Volumes are removed when Pods are destroyed.
+
+  - Kubernetes volumes can have different Drivers and Types.
+    Whereas Docker Volumes can't have any Drivers or Type Support.
+
+  - Volumes are not necessarily persistent.
+    In Docker, Volumes persist until manually clrea
+    
+  - Volumes survive Containers restarts and removals.
+    In Docker, it is the same.
+
+[*][*][*] Getting Started with Kubernetes Volumes [*][*][*]
+
+----------------------------------------------------------------
+@ [deployment.yaml]
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: story-deployment
+spec:
+  <!-- In case of more than 1 replica -->
+  <!-- Volume will be lost if pod crashes. -->
+  replicas: 2
+  selector:
+    matchLabels:
+      app: story
+  template:
+    metadata:
+      labels:
+        app: story
+    spec:
+      containers:
+        - name: story
+          image: mechawolf/kub-data-demo:1
+          volumeMounts:
+            <!-- Container internal path where volume should be mounted. (WORKDIR/some-folder) -->
+            - mountPath: /app/story
+              <!-- Now this volume is mapped onto the above path in the contaier. -->
+              name: story-volume
+          <!-- Some resource limiting... -->
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 256Mi
+              cpu: "0.2"
+      <!-- On the same level as the containers, volumes are defined. -->
+      volumes:
+        - name: story-volume
+          <!-- Pods dead = volume dead => new pod = new volume -->
+          <!-- Great basic volumes. emptyDir: {} <- for every pod (so not persisted on a pod crash) -->
+          hostPath:
+            path: /data
+            <!-- Created if not preset -->
+            type: DirectoryOrCreate
+
+----------------------------------------------------------------
+
+In case your application crashes.
+
+Remember, volumes are attached to pods.
+
+Some of the Types are:
+
+* emptyDir
+  - Pod specific
+  - Can't be used across multiple containers
+
+* hostPath
+  - Shared across pods
+  - Mostly often used during development
+  - One per node
+
+* CSI (Container Storage Interface)
+  - https://github.com/kubernetes-sigs/aws-efs-csi-driver
+
+[*][*][*] Persistent Volumes [*][*][*]
+
+Persistent Volumes are POD and NODE independent.
+They are build around the idea of independence.
+
+    Cluster {
+      Persitent Volume 1 (PV) <-
+      Persitent Volume 2 (PV) <-
+      Node {
+        Pod
+        Pod
+        Persistent Volume Claim (Request access) ->
+      }
+      Node {
+        Pod
+        Pod
+        Persistent Volume Claim (Request access) ->
+      }
+    }
+
+[*][*][*] Persistent Volume Claim [*][*][*]
+
+----------------------------------------------------------------
+@ [host-pv.yaml]
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: host-pv
+spec:
+  capacity:
+    storage: 1Gi
+  <!-- Filesystem -> inside of our virtual machine (argument...) -->
+  <!-- Block -> ... -->
+  volumeMode: Filesystem
+  storageClassName: standard
+  accessModes:
+    <!-- Multiple pod but only one NODE --> ||
+    - ReadWriteOnce
+    <!-- Can be claimed by multiple NODES --> ||
+    - ReadOnlyMany
+    <!-- Not available on hostPath -->
+    - ReadWriteMany
+  hostPath:
+    path: /data
+    type: DirectoryOrCreate
+
+----------------------------------------------------------------
+@ [host-pvc.yaml]
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: host-pvc
+spec:
+  volumeName: host-pv
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  <!-- Counterpart to the "capacity" -->
+  resources:
+    requests:
+      storage: 1Gi
+
+
+----------------------------------------------------------------
+
+Getting Storage Classes
+# ❯ kubectl get sc
+
+Storage Class will provide important information to the Persistent Volume.
+
+Getting Persistent Volumes
+# ❯ kubectl get pv
+
+Getting PV Claims
+# ❯ kubectl get pvc
+
+[*][*][*] Environment Variables [*][*][*]
+
+----------------------------------------------------------------
+@ [deployment.yaml]
+
+...
+spec:
+  containers:
+    env:
+      - name: STORY_FOLDER
+        value: /app/story 
+        <!-- Or this approach -->
+        valueFrom:
+          configMapKeyRef:
+            <!-- I takes the value from the file below -->
+            name: data-store-env
+            key: folder
+
+---------------------------------------------------------------
+@ [environment.yaml]
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-store-env
+<!-- With env we use the "data" key -->
+data:
+  folder: 'story'
+
+---------------------------------------------------------------
+
+Getting configMaps
+# ❯ kubectl get configmap
+
+<!-- HELM please -->
+
+[-----------------------]
+  Kubernetes Networking
+[-----------------------]
+
+Services has a bit less of selector logic in them than deployments.
+
+Types of services:
+  1. ClusterIP - Internal Service 
+                 (has some load-balancing but no outside world can access it)
+  2. NodePort - Reachable from the outside, but uses node's IP address
+  3. LoadBalancer - Distributes traffic around pods
+
+[*][*][*] Pod internal communication [*][*][*]
+
+Kubernetes allows you to use localhost + exposed port inside of a pod.
+
+Services give us stable IP addresses.
+
+Getting the IP cluster addresses in order to connect pods with "hidden" pods.
+<!-- 
+  ❯ kubectl get services       
+  NAME            TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+  auth-service    ClusterIP      10.111.234.209   <none>        80/TCP           23s
+  kubernetes      ClusterIP      10.96.0.1        <none>        443/TCP          4d17h
+  users-service   LoadBalancer   10.102.116.126   <pending>     8080:31786/TCP   29m
+-->
+
+Created for all services (Generated by Kubernetes)
+  @ [JavaScript]: `process.env.AUTH_SERVICE_SERVICE_HOST`
+
+Kubernetes comes with built-in service called CoreDNS which helps
+with creating Domain names (Cluster internal).
+
+Getting namespaces
+# ❯ kubectl get namespaces
+
+<!-- 
+  NAME              STATUS   AGE
+  default           Active   24h
+  kube-node-lease   Active   24h
+  kube-public       Active   24h
+  kube-system       Active   24h
+-->
+
+@ [deployment.yaml]:
+  env:
+    - name: AUTH_ADDRESS
+      <!-- Taken from the namespace names -->
+      value: "auth-service.default"
+
+3 ways of connecting services:
+  1. Manual IP lookup with a command
+  2. Using envs. eg. SERVICE_NAME_SERVICE_HOST
+  3. Automatically generated Domain Names. eg. "auth-service.default" (Preferred)
+
+Unknown problem?:
+
+<!-- 
+  ❯ kubectl get pods
+  NAME                                READY   STATUS             RESTARTS     AGE
+  auth-deployment-6d979b4858-7x9t4    1/1     Running            0            51m
+  tasks-deployment-78979764cb-dwnxr   0/1     CrashLoopBackOff   1 (8s ago)   14s
+  users-deployment-8554d547db-dz55w   1/1     Running            0            25m
+-->
+
+CORS matters for browsers.
+
+[*][*][*] Reverse proxy [*][*][*]
+
+---------------------------------------------------------------
+@ [nginx.conf]:
+<!-- 
+  server {
+    listen 80;
+
+    location /api/ {
+      proxy_pass http://192.168.99.100:32140;
+    }
+
+    ||
+
+  # ❯ We can use automatically generated Domain address.
+    location /api/ {
+      proxy_pass http://tasks-service.default:8000;
+    }
+    
+    location / {
+      root /usr/share/nginx/html;
+      index index.html index.htm;
+      try_files $uri $uri/ /index.html =404;
+    }
+    
+    include /etc/nginx/extra-conf.d/*.conf;
+  }
+-->
+
+---------------------------------------------------------------
+@ [JavaScript]:
+<!-- 
+  fetch('/api/tasks', {
+        method: 'POST', ...
+-->
+
+---------------------------------------------------------------
+
+[-------------------------]
+  Kubernetes - Deployment
+[-------------------------]
+
+EKS - Elastic Kubernetes Service
+
+Ways of deployment:
+  1. Custom data center - everything on your own -> machines + kubernetes
+  2. Cloud Provider - almost everything on your own -> manually or via "kops"
+  3. Use managed service - Define cluster arhitecture -> use EKS
+
+AWS ECS:
+  - Managed service for Container Deployments
+  - AWS-specific syntax
+  - AWS-specific configuration
+
+AWS EKS:
+  - Managed service for Kubernetes
+  - Decentralized syntax
+
+Instance on EKS will be managed by AWS.
+
+Instructions
+  1. Create cluster
+  2. Cluster Service Role (Create the new one) -> IAM Service (Identity and Access Management)
+     Create role -> AWS Service -> EKS -> EKS Cluster
+  3. Cloud Formation (Allows you to create things with other services based on templates)
+
+Connecting to EKS Cluster takes place in a specific file.
+So that...
+# ❯ kubectl ...
+
+will talk to the EKS.
+
+It is /Users/user1/[.kube] folder.
+
+Vim the config
+# ❯ vim config
+
+Install the AWS cli. In order to connect to it do the following.
+
+then...
+
+My account -> Security Credentials -> Access keys -> Download the key
+
+# ❯ aws configure
+<!--
+  AWS Access Key ID [None]: XXXXXXXXXXXX
+  AWS Secret Access Key [None]: XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  Default region name [None]: us-east-1
+  Default output format [None]: 
+-->
+
+This will update .kube/config file
+# ❯ aws eks --region <region> update-kubeconfig --name <aws-cluster-name>
+
+Output:
+<!--
+  Added new context arn:aws:eks:us-east-1:277953557775:cluster/kub-dep-demo to /Users/lukaszjonasiak/.kube/config 
+-->
+
+Now kubectl runs in your AWS Cluster.
+
+[*] Getting worker nodes [*]
+
+Cluster needs permissions.
+Node are in the end EC2 Instances and they also need permission to read/write etc...
+
+Compute -> Configure Node Group -> ()
+
+but first...
+
+Create new role with
+- AmazonEKSWorkerNodePolicy
+- AmazonEKS_CNI_Policy
+- AmazonEC2ContainerRegistryReadOnly
+
+This allows instances to perform actions.
+
+() -> t3.small
+
+Nodes = Worker Nodes
+
+----
+
+Apply .yaml files and it will be running on AWS.
+
+It is a huge IP address that looks somehow like this:
+
+ef781y8gh3fn034fn23yfb19ufhn3br2f.us-east-2.elb.amazonaws.com/<end-point>
+
+So that you can use your EXTERNAL-IP but it doesn't work
+because something was not working in my case.
+# ❯ kubectl get svc
+
+<!--
+  ❯ kubectl get svc
+  NAME           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+  auth-service   ClusterIP   10.100.81.30   <none>        3000/TCP   23s
+  kubernetes     ClusterIP   10.100.0.1     <IP>          443/TCP    24h
+-->
+
+Will create LoadBalancer for you under your EC2 instances.
+# ❯ kubectl apply ...
+
+Your deployment will be updated once you do another "kubectl apply" command.
+
+[*] AWS Volumes [*]
+
+In case you would want to write something to your files?
+
+Making a persistent volume.
+
+AWS EFS CSI?
+
+Just go to GitHub page of the AWS EFS CSI.
+And execute this
+# ❯ kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.3"
+
+So that...
+  1. Create Security Group
+  2. Add rule (Select NFS)
+  3. Take your IPv4 from the VPC Config.
+  4. Create File System
+
+Getting storage classes
+# ❯ kubectl get sc
+
+Adding EFS as a volume in our application,
+PersistentVolumeClaim & StorageClass too.
+<!-- 
+    kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      name: {{efs-sc}}
+    provisioner: ((efs.csi.aws.com))
+    ---
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: efs-pv
+    spec:
+      capacity:
+        storage: 5Gi
+      # EFS is a file system so...
+      volumeMode: Filesystem
+      # So that many nodes can use the volume.
+      accessModes:
+        - ReadWriteMany
+      storageClassName: {{efs-sc}}
+      csi:
+        driver: ((efs.csi.aws.com))
+        volumeHandle: fs-08381fb985372d576
+    ---
+    apiVersion: v1
+    kind: persistentVolumeClaim
+    metadata:
+      name: efs-pvc
+    spec:
+      access:
+        - ReadWriteMany
+      storageClassName: {{efs-sc}}
+      resources:
+        requests:
+          storage: 5Gi
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: users-service
+    spec:
+      selector:
+        app: users
+      type: LoadBalancer
+      ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 3000
+
+---
+...
+
+#    On the same level as env key, in your deployment
+
+          volumeMounts:
+            - name: efs-vol
+              mountPath: ./app/users
+      volumes:
+        - name: efs-vol
+          persistentVolumeClaim:
+            claimName: efs-pvc
+-->
