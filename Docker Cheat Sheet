@@ -360,6 +360,20 @@ Set on image build (docker build) via --build-arg
 Available inside of @ [Dockerfile] and in APPLICATION code.
 Set via ENV in @ [Dockerfile] or via --env on docker run.
 
+--------
+
+Setting ARG through build command:
+
+@ [Dockerfile]
+ARG VAR_NAME
+ENV PORT=$VAR_NAME
+
+^^ this goes to Dockerifle.
+
+and this is the command:
+
+# ❯ docker build --build-arg VAR_NAME=value -t your_image_name .
+
 ===
 ENV
 ===
