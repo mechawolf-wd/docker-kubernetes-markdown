@@ -422,8 +422,6 @@ Most USEFUL for changing something between built images.
 ^ Example
 
 [*][*][*] Networking: (Cross-) Container Communication [*][*][*]
-[*][*][*][*] *Networking: (Cross-) Container Communication* [*][*][*][*]
-
 
 (One container should do one separated thing!)
 
