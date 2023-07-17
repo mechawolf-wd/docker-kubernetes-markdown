@@ -34,14 +34,19 @@ Big Joints are:
 -----------------------------------------------------
 [***] Installing Docker on VM (Virtual Machine) [***]
 
+(sudo is important inside of an SSH-connected EC2 instance)
+
 Update & and using Latest Check
-# ❯ sudo yum update -y
+# ❯ sudo yum update -y (sudo yum update -y, sudo yum upgrade -y)
 
 AWS Docker installing
-# ❯ sudo amazon-linux-extras install docker
+# ❯ sudo amazon-linux-extras install docker (sudo yum install -y docker)
 
 Starting a Docker Service
 # ❯ sudo service docker start
+
+Build for specified platform
+# ❯ docker buildx build --platform linux/amd64 -t my-image .
 
 ------------------------------------------------
 [***] Pushing our local Image to the Cloud [***]
@@ -96,7 +101,7 @@ Pulling latest version
 [***] AWS ECS - Managed Docker Container Service (No running server) [***]
 
 Overwrite workdir on start.
-# ❯ docker run --workdir ...
+# ❯ docker run --workdir ...ss
 
 *I* Task = One remote machine that runs one or more containers.
 
@@ -148,7 +153,7 @@ AWS ECS +-> ECS TASK +-> (NODE REST && MONGODB +                  )
 -------------------------------------------------------
 [***] Migrating to MongoDB Atlas [***]
 
-- Remember abount changing your backend's database access.
+- Remember about changing your backend's database access.
 - Authorize your access with .env file that is more specific than Dockerfile's envs.
 
 // Example
